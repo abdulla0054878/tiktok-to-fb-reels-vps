@@ -1,2 +1,2 @@
-yt-dlp>=2023.07.06
-schedule
+python-dotenv
+requests
