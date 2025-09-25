@@ -1,7 +1,8 @@
 import os, requests
 from bs4 import BeautifulSoup
-
 from dotenv import load_dotenv
+
+# Load environment variables
 load_dotenv()
 
 TIKTOK_PROFILE = os.getenv("TIKTOK_PROFILE")
