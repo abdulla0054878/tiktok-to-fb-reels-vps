@@ -1,19 +1,16 @@
-import os
-import requests
-import json
-import time
+import os, requests, json, time
 from dotenv import load_dotenv
 from datetime import datetime
 
 load_dotenv()
 
 PROFILE_URL = os.getenv("TIKTOK_PROFILE")
-CHECK_INTERVAL = int(os.getenv("CRON_INTERVAL_MINUTES", 5)) * 60
+INTERVAL = int(os.getenv("CRON_INTERVAL_MINUTES", 5)) * 60
 VIDEO_DIR = "/root/videos"
 
 def get_latest_video():
-    # Simulated API call or scraping logic
-    response = requests.get(f"https://api.tiktok-downloader.fake/latest?profile={PROFILE_URL}")
+    # Simulated API or scraping logic
+    response = requests.get(f"https://api.tiktok.fake/latest?profile={PROFILE_URL}")
     data = response.json()
     return data.get("video_url"), data.get("title")
 
