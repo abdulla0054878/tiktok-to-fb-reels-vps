@@ -3,17 +3,17 @@ set -e
 
 cd ~/tiktok-to-fb-reels-vps
 
-echo "[INFO] Pulling latest code..."
+echo "[INFO] Resetting repo..."
 git reset --hard
 git pull origin main
 
-echo "[INFO] Python deps..."
+echo "[INFO] Installing Python dependencies..."
 pip3 install -r requirements.txt
 
-echo "[INFO] Node deps..."
+echo "[INFO] Installing Node.js dependencies..."
 npm install
 
-echo "[INFO] Restarting pm2..."
+echo "[INFO] Restarting with PM2..."
 pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
 
-echo "[SUCCESS] 🚀 Deploy Finished!"
+echo "[SUCCESS] 🚀 Deploy & Update finished!"
