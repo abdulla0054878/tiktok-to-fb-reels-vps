@@ -18,7 +18,7 @@ const delay = (ms) => new Promise(r => setTimeout(r, ms));
     });
     const page = await browser.newPage();
 
-    // ✅ Cookies লোড করা (ENV → নাহলে cookies.json ফাইল থেকে)
+    // ✅ Cookies লোড (ENV → fallback cookies.json ফাইল)
     let cookiesData = [];
     if (process.env.FB_COOKIES) {
       try {
@@ -45,13 +45,13 @@ const delay = (ms) => new Promise(r => setTimeout(r, ms));
       process.exit(1);
     }
 
-    // FB Page Link ওপেন করুন
+    // ✅ FB Page link open
     const PAGE_LINK = process.env.FB_PAGE_LINK;
     if (!PAGE_LINK) throw new Error("❌ FB_PAGE_LINK not set!");
     await page.goto(PAGE_LINK, { waitUntil: "networkidle2" });
     await delay(7000);
 
-    // Switch Now try
+    // Generic click helper
     async function clickBtn(frame, texts) {
       for (let t of texts) {
         const handle = await frame.evaluateHandle(txt => {
@@ -68,14 +68,15 @@ const delay = (ms) => new Promise(r => setTimeout(r, ms));
       }
       return false;
     }
+
     await clickBtn(page, ["Switch Now", "সুইচ"]);
 
-    // Reels Composer খুলুন
+    // Reels Composer
     await page.goto("https://www.facebook.com/reels/create/", { waitUntil: "networkidle2" });
     await delay(10000);
     let composer = page.frames().find(f => f.url().includes("reel")) || page;
 
-    // Video আপলোড
+    // Upload video
     const fileField = await composer.$('input[type=file][accept*="video"]');
     if (!fileField) throw new Error("⚠️ File input not found!");
     await fileField.uploadFile(videoPath);
@@ -85,10 +86,12 @@ const delay = (ms) => new Promise(r => setTimeout(r, ms));
     await clickBtn(composer, ["Next", "পরবর্তী"]);
     await clickBtn(composer, ["Next", "পরবর্তী"]);
 
-    // Caption
+    // Caption box
     try {
-      const box = await composer.waitForSelector('div[role="textbox"][contenteditable="true"]',
-        { visible: true, timeout: 60000 });
+      const box = await composer.waitForSelector(
+        'div[role="textbox"][contenteditable="true"]',
+        { visible: true, timeout: 60000 }
+      );
       await box.type(captionText, { delay: 40 });
       console.log("✍️ Caption:", captionText);
     } catch {
