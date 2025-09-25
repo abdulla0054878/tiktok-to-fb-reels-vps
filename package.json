@@ -1,0 +1,12 @@
+{
+  "name": "tiktok-to-fb-reels",
+  "version": "1.0.0",
+  "description": "TikTok → Facebook Reels auto uploader bot",
+  "main": "fb_reels_uploader_final.js",
+  "scripts": {
+    "start": "python3 tiktok_worker.py"
+  },
+  "dependencies": {
+    "puppeteer": "^21.6.0"
+  }
+}
