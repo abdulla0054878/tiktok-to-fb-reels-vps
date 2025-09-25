@@ -18,18 +18,19 @@ const VIDEO_FILE = "./downloads/latest.mp4";
 
   const cookies = JSON.parse(fs.readFileSync(COOKIES_PATH, "utf-8"));
   await context.addCookies(cookies);
+
   const page = await context.newPage();
-
   await page.goto(FB_PAGE_LINK);
-  console.log("[INFO] Uploading video...");
 
+  console.log("[INFO] Uploading video...");
   await page.setInputFiles('input[type="file"]', VIDEO_FILE);
+
   await page.waitForTimeout(5000);
 
   try {
     await page.fill("textarea", FB_CAPTION);
-  } catch(e) {
-    console.log("[WARN] Caption textarea not found.");
+  } catch (e) {
+    console.log("[WARN] Caption textarea not found");
   }
 
   await page.click('button:has-text("Post")');
