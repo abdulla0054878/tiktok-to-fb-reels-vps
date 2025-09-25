@@ -1,14 +1,10 @@
-import os
-import time
-import requests
-from datetime import datetime
+import os, time, requests, subprocess
 from dotenv import load_dotenv
-import subprocess
+from datetime import datetime
 
 load_dotenv()
 
 PROFILE_URL = os.getenv("TIKTOK_PROFILE")
-INTERVAL_SEC = int(os.getenv("CRON_INTERVAL_MINUTES", "5")) * 60
 VIDEO_DIR = "/root/videos"
 
 def require_env(name: str) -> str:
@@ -18,9 +14,8 @@ def require_env(name: str) -> str:
     return val
 
 def get_latest_video(profile_url: str):
-    # TODO: Replace with real scraping/downloader logic.
-    # Placeholder response structure:
-    # return ("https://example.com/video.mp4", "Example TikTok caption") when new video exists
+    # TODO: এখানে আসল TikTok scraping/downloader logic বসাতে হবে
+    # Placeholder: কোনো নতুন ভিডিও নেই
     return (None, None)
 
 def download_video(url: str, out_path: str):
@@ -28,45 +23,40 @@ def download_video(url: str, out_path: str):
         r.raise_for_status()
         with open(out_path, "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
+                f.write(chunk)
 
 def upload_to_facebook(video_path: str, caption: str):
     cmd = ['node', 'fb_reels_uploader_final.js', video_path, caption]
     subprocess.run(cmd, check=True)
 
-def ensure_dirs():
-    if not os.path.isdir(VIDEO_DIR):
-        os.makedirs(VIDEO_DIR, exist_ok=True)
-
 def main():
-    # Validate required envs early
-    profile = require_env("TIKTOK_PROFILE")
+    require_env("TIKTOK_PROFILE")
     require_env("FB_PAGE_LINK")
     require_env("FB_COOKIES_PATH")
 
-    ensure_dirs()
+    if not os.path.isdir(VIDEO_DIR):
+        os.makedirs(VIDEO_DIR, exist_ok=True)
 
-    print(f"[{datetime.now()}] 🔍 Checking TikTok profile: {profile}")
-    video_url, caption = get_latest_video(profile)
+    print(f"[{datetime.now()}] 🔍 Checking TikTok profile...")
+    video_url, caption = get_latest_video(PROFILE_URL)
 
     if not video_url:
-        print(f"[{datetime.now()}] ℹ️ No new video found.")
+        print("ℹ️ No new video found.")
         return
 
-    if not caption or not caption.strip():
+    if not caption:
         caption = os.getenv("FB_CAPTION", "🔥 Auto Upload")
 
     filename = os.path.join(VIDEO_DIR, f"{int(time.time())}.mp4")
-    print(f"[{datetime.now()}] 📥 Downloading: {caption}")
+    print(f"📥 Downloading: {caption}")
     download_video(video_url, filename)
 
-    print(f"[{datetime.now()}] 📤 Uploading to Facebook Reels...")
+    print("📤 Uploading to Facebook Reels...")
     upload_to_facebook(filename, caption)
 
     if os.path.exists(filename):
         os.remove(filename)
-        print(f"[{datetime.now()}] 🧹 Deleted local video file: {filename}")
+        print("🧹 Deleted local video file.")
 
 if __name__ == "__main__":
     main()
