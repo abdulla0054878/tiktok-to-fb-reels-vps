@@ -13,7 +13,7 @@ if [ -f "$VIDEO_FILE" ]; then
   rm -f "$VIDEO_FILE"
   echo "[INFO] Video removed after upload."
 else
-  echo "[INFO] No new video found to upload."
+  echo "[INFO] No new video found."
 fi
 
 echo "[END] Done ✅"
