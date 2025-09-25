@@ -1,61 +1,49 @@
 import os
+import requests
+import json
 import time
-import schedule
-from yt_dlp import YoutubeDL
-import subprocess
+from dotenv import load_dotenv
+from datetime import datetime
 
-# TikTok Profile URL ENV থেকে নেবে
-TIKTOK_PROFILE = os.getenv("TIKTOK_PROFILE")
-CHECK_INTERVAL = int(os.getenv("CRON_INTERVAL_MINUTES", "5"))
+load_dotenv()
 
-if not TIKTOK_PROFILE:
-    raise RuntimeError("❌ Please set TIKTOK_PROFILE environment variable")
+PROFILE_URL = os.getenv("TIKTOK_PROFILE")
+CHECK_INTERVAL = int(os.getenv("CRON_INTERVAL_MINUTES", 5)) * 60
+VIDEO_DIR = "/root/videos"
 
-seen_ids = set()
+def get_latest_video():
+    # Simulated API call or scraping logic
+    response = requests.get(f"https://api.tiktok-downloader.fake/latest?profile={PROFILE_URL}")
+    data = response.json()
+    return data.get("video_url"), data.get("title")
 
-def check_new_videos():
-    print("🔍 Checking TikTok:", TIKTOK_PROFILE)
-    try:
-        ydl_opts = {"extract_flat": True, "quiet": True, "skip_download": True}
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(TIKTOK_PROFILE, download=False)
-            entries = info.get("entries", [])
-            if not entries:
-                print("❌ No videos found")
-                return
+def download_video(url, filename):
+    r = requests.get(url, stream=True)
+    with open(filename, "wb") as f:
+        for chunk in r.iter_content(chunk_size=8192):
+            f.write(chunk)
+    return filename
 
-            latest = entries[0]
-            vid_id = latest.get("id")
-            url = latest.get("url")
-            title = latest.get("title", "🚀 Auto Reel Upload")
+def upload_to_facebook(video_path, caption):
+    os.system(f'node fb_reels_uploader_final.js "{video_path}" "{caption}"')
 
-            if not vid_id or vid_id in seen_ids:
-                print("⏳ No new video")
-                return
+def main():
+    print(f"[{datetime.now()}] 🔍 Checking TikTok profile...")
+    video_url, title = get_latest_video()
+    if not video_url:
+        print("❌ No new video found.")
+        return
 
-            seen_ids.add(vid_id)
-            filepath = f"/tmp/{vid_id}.mp4"
-            dl_opts = {"outtmpl": filepath, "format": "mp4"}
-            with YoutubeDL(dl_opts) as ydl2:
-                ydl2.download([url])
-            print("📥 Downloaded:", filepath)
+    filename = os.path.join(VIDEO_DIR, f"{int(time.time())}.mp4")
+    print(f"📥 Downloading: {title}")
+    download_video(video_url, filename)
 
-            subprocess.run(
-                ["node", "fb_reels_uploader_final.js", filepath, title],
-                check=True
-            )
+    print("📤 Uploading to Facebook Reels...")
+    upload_to_facebook(filename, title)
 
-            os.remove(filepath)
-            print("🧹 Deleted:", filepath)
+    if os.path.exists(filename):
+        os.remove(filename)
+        print("🧹 Deleted local video file.")
 
-    except Exception as e:
-        print("❌ Error:", str(e))
-
-# প্রথমবার চালু হওয়া মাত্র একবার চেক করবে
-check_new_videos()
-schedule.every(CHECK_INTERVAL).minutes.do(check_new_videos)
-
-print(f"🚀 Worker running every {CHECK_INTERVAL} minutes...")
-while True:
-    schedule.run_pending()
-    time.sleep(5)
+if __name__ == "__main__":
+    main()
