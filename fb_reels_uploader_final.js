@@ -88,7 +88,6 @@ const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
     // Next → Next
     await clickBtn(composer, ["Next", "পরবর্তী"]);
-
     await clickBtn(composer, ["Next", "পরবর্তী"]);
 
     // Caption with fallback
