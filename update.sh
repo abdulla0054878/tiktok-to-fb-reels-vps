@@ -1,19 +1,19 @@
 #!/bin/bash
 set -e
+source .env
 
-echo "🚀 Updating system..."
-cd /root/tiktok-to-fb-reels-rgs
+VIDEO_FILE="./downloads/latest.mp4"
 
-if [ -d "venv" ]; then
-  source venv/bin/activate
+echo "[START] TikTok → Facebook Bot Running..."
+
+python3 tiktok_worker.py
+
+if [ -f "$VIDEO_FILE" ]; then
+  node fb_reels_uploader_final.js
+  rm -f "$VIDEO_FILE"
+  echo "[INFO] Video cleaned up."
+else
+  echo "[INFO] No new video to upload."
 fi
 
-git pull origin main || true
-npm install
-pip install -r requirements.txt
-
-if command -v pm2 >/dev/null 2>&1; then
-  pm2 restart all || true
-fi
-
-echo "✅ Update complete at $(date)"
+echo "[END] Done ✅"
