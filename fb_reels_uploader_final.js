@@ -4,8 +4,8 @@ const { chromium } = require("playwright");
 
 const FB_PAGE_LINK = process.env.FB_PAGE_LINK;
 const FB_CAPTION = process.env.FB_CAPTION || "🔥 Auto Upload";
-const COOKIES_PATH = process.env.FB_COOKIES_PATH || "./cookies.json";
 const VIDEO_FILE = "./downloads/latest.mp4";
+const COOKIES_PATH = "./cookies.json";   // লোকাল কুকিজ (GitHub এ নয়)
 
 (async () => {
   if (!fs.existsSync(VIDEO_FILE)) {
@@ -24,13 +24,12 @@ const VIDEO_FILE = "./downloads/latest.mp4";
 
   console.log("[INFO] Uploading video...");
   await page.setInputFiles('input[type="file"]', VIDEO_FILE);
-
   await page.waitForTimeout(5000);
 
   try {
     await page.fill("textarea", FB_CAPTION);
-  } catch (e) {
-    console.log("[WARN] Caption textarea not found");
+  } catch {
+    console.log("[WARN] Caption field not found.");
   }
 
   await page.click('button:has-text("Post")');
