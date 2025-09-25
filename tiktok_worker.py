@@ -2,7 +2,7 @@ import os, requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
-# Load environment variables
+# load environment variables
 load_dotenv()
 
 TIKTOK_PROFILE = os.getenv("TIKTOK_PROFILE")
@@ -29,6 +29,6 @@ if __name__ == "__main__":
     if url:
         print(f"[INFO] Found video: {url}")
         download_video(url)
-        print(f"[INFO] Downloaded to {VIDEO_FILE}")
+        print(f"[INFO] Downloaded: {VIDEO_FILE}")
     else:
         print("[INFO] No new video found.")
