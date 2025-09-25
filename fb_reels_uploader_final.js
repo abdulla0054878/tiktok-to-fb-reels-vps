@@ -1,68 +1,39 @@
 const fs = require("fs");
 require("dotenv").config();
-const puppeteer = require("puppeteer-core");
+const { chromium } = require("playwright");
 
-const videoPath = process.argv[2];
-const captionText = process.argv[3] || process.env.FB_CAPTION || "🔥 Auto Upload";
-const cookiesPath = process.env.FB_COOKIES_PATH || "./cookies.json";
-const fbPageLink = process.env.FB_PAGE_LINK;
-
-if (!videoPath || !fs.existsSync(videoPath)) {
-  console.error("❌ Video file missing!");
-  process.exit(1);
-}
-if (!fbPageLink) {
-  console.error("❌ FB_PAGE_LINK not set in .env");
-  process.exit(1);
-}
+const FB_PAGE_LINK = process.env.FB_PAGE_LINK;
+const FB_CAPTION = process.env.FB_CAPTION || "🔥 Auto Upload";
+const COOKIES_PATH = process.env.FB_COOKIES_PATH || "./cookies.json";
+const VIDEO_FILE = "./downloads/latest.mp4";
 
 (async () => {
-  const browser = await puppeteer.launch({
-    headless: "new",
-    executablePath: "/usr/bin/chromium-browser",
-    args: ["--no-sandbox"]
-  });
+  if (!fs.existsSync(VIDEO_FILE)) {
+    console.log("[INFO] No video file found.");
+    process.exit(0);
+  }
+
+  const browser = await chromium.launch({ headless: false });
+  const context = await browser.newContext();
+
+  const cookies = JSON.parse(fs.readFileSync(COOKIES_PATH, "utf-8"));
+  await context.addCookies(cookies);
+  const page = await context.newPage();
+
+  await page.goto(FB_PAGE_LINK);
+  console.log("[INFO] Uploading video...");
+
+  await page.setInputFiles('input[type="file"]', VIDEO_FILE);
+  await page.waitForTimeout(5000);
 
   try {
-    const page = await browser.newPage();
-
-    if (!fs.existsSync(cookiesPath)) {
-      console.error("❌ cookies.json not found");
-      process.exit(1);
-    }
-    const cookies = JSON.parse(fs.readFileSync(cookiesPath, "utf-8"));
-    await page.setCookie(...cookies);
-
-    await page.goto(fbPageLink, { waitUntil: "networkidle2" });
-    await page.waitForTimeout(4000);
-
-    await page.goto("https://www.facebook.com/reels/create/", { waitUntil: "networkidle2" });
-    await page.waitForTimeout(8000);
-
-    const fileInput = await page.$('input[type="file"]');
-    await fileInput.uploadFile(videoPath);
-
-    await page.waitForTimeout(4000);
-    const captionBox = await page.$('div[role="textbox"]') || await page.$('[contenteditable="true"]');
-    if (captionBox) {
-      await captionBox.type(captionText, { delay: 35 });
-    }
-
-    const publishBtn = await page.$x("//span[contains(text(),'Publish') or contains(text(),'প্রকাশ')]");
-    if (publishBtn.length) {
-      await publishBtn[0].click();
-    } else {
-      console.error("❌ Publish button not found");
-    }
-
-    await page.waitForTimeout(7000);
-    console.log("✅ Uploaded to Facebook Reels.");
-
-  } finally {
-    await browser.close();
-    try {
-      fs.unlinkSync(videoPath);
-      console.log("🧹 Cleaned local video file.");
-    } catch {}
+    await page.fill("textarea", FB_CAPTION);
+  } catch(e) {
+    console.log("[WARN] Caption textarea not found.");
   }
+
+  await page.click('button:has-text("Post")');
+  console.log("[INFO] ✅ Upload complete");
+
+  await browser.close();
 })();
