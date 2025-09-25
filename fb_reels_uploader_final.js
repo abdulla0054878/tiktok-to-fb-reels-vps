@@ -1,6 +1,7 @@
 const puppeteer = require("puppeteer-core");
 const fs = require("fs");
 const path = require("path");
+require("dotenv").config();
 
 const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -15,7 +16,7 @@ const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
     const browser = await puppeteer.launch({
       headless: "new",
-      executablePath: "/usr/bin/chromium-browser",   // <-- system chromium
+      executablePath: "/usr/bin/chromium-browser",
       args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     });
 
@@ -23,20 +24,16 @@ const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
     // ✅ Cookies load
     let cookiesData = [];
-    if (process.env.FB_COOKIES) {
-      try {
+    try {
+      if (process.env.FB_COOKIES) {
         cookiesData = JSON.parse(process.env.FB_COOKIES);
         console.log("✅ FB_COOKIES loaded from ENV");
-      } catch (e) {
-        console.error("❌ Invalid FB_COOKIES env:", e.message);
-      }
-    } else {
-      try {
+      } else {
         cookiesData = JSON.parse(fs.readFileSync("cookies.json", "utf-8"));
         console.log("✅ FB_COOKIES loaded from cookies.json file");
-      } catch (e) {
-        console.error("❌ Could not load cookies.json");
       }
+    } catch (e) {
+      console.error("❌ Could not load cookies:", e.message);
     }
 
     if (cookiesData.length > 0) {
@@ -58,8 +55,11 @@ const delay = (ms) => new Promise(r => setTimeout(r, ms));
     async function clickBtn(frame, texts) {
       for (let txt of texts) {
         const handle = await frame.evaluateHandle(t => {
-          const els = [...document.querySelectorAll('div[role="button"], span')];
-          return els.find(el => el.innerText && el.innerText.trim().includes(t)) || null;
+          const els = [...document.querySelectorAll('div[role="button"], span, div[aria-label]')];
+          return els.find(el =>
+            (el.innerText && el.innerText.trim().includes(t)) ||
+            (el.getAttribute("aria-label") && el.getAttribute("aria-label").includes(t))
+          ) || null;
         }, txt);
         const el = handle.asElement();
         if (el) {
@@ -88,24 +88,54 @@ const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
     // Next → Next
     await clickBtn(composer, ["Next", "পরবর্তী"]);
+
     await clickBtn(composer, ["Next", "পরবর্তী"]);
 
-    // Caption
+    // Caption with fallback
     try {
-      const box = await composer.waitForSelector('div[role="textbox"][contenteditable="true"]',
-        { visible: true, timeout: 60000 });
-      await box.type(captionText, { delay: 40 });
-      console.log("✍️ Caption added");
-    } catch {
-      console.warn("⚠️ Caption box not found, skipping...");
+      let box = await composer.$('div[role="textbox"][contenteditable="true"]');
+      if (!box) {
+        box = await composer.$('div[aria-label*="Write"], div[aria-label*="লিখুন"]');
+      }
+      if (box) {
+        await box.type(captionText, { delay: 40 });
+        console.log("✍️ Caption added");
+      } else {
+        console.warn("⚠️ Caption box not found, skipping...");
+      }
+    } catch (e) {
+      console.warn("⚠️ Caption step failed:", e.message);
     }
 
-    // Publish
-    await clickBtn(composer, ["Publish", "প্রকাশ", "Share now"]);
-    console.log("✅ Reel Published!");
+    // Publish with fallback
+    async function clickPublish(frame) {
+      const selectors = [
+        'div[aria-label*="Publish"]',
+        'div[aria-label*="প্রকাশ"]',
+        'div[aria-label*="Share"]',
+        'span:contains("Publish")',
+        'span:contains("প্রকাশ")',
+        'span:contains("Share now")'
+      ];
+      for (let sel of selectors) {
+        try {
+          const btn = await frame.$(sel);
+          if (btn) {
+            await btn.click();
+            console.log("✅ Reel Published!");
+            return true;
+          }
+        } catch {}
+      }
+      console.error("❌ Publish button not found!");
+      return false;
+    }
 
+    await clickPublish(composer);
+
+    await delay(5000); // wait for publish to complete
     await browser.close();
-    
+
     if (fs.existsSync(videoPath)) {
       fs.unlinkSync(videoPath);
       console.log("🧹 Deleted:", videoPath);
