@@ -1,12 +1,16 @@
 {
-  "name": "tiktok-to-fb-reels",
+  "name": "tiktok-to-fb-reels-vps",
   "version": "1.0.0",
-  "description": "TikTok → Facebook Reels auto uploader bot",
+  "description": "TikTok → Facebook Reels auto uploader bot (VPS)",
   "main": "fb_reels_uploader_final.js",
   "scripts": {
-    "start": "python3 tiktok_worker.py"
+    "worker": "python3 tiktok_worker.py",
+    "upload": "node fb_reels_uploader_final.js",
+    "start": "npm run worker"
   },
   "dependencies": {
-    "puppeteer": "^21.6.0"
+    "puppeteer": "^21.6.0",
+    "fs-extra": "^11.2.0",
+    "dotenv": "^16.3.2"
   }
 }
